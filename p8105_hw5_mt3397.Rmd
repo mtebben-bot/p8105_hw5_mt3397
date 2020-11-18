@@ -1,11 +1,12 @@
 ---
-title: "Untitled"
+title: "HW 5"
 output: github_document
 ---
 
 ```{r setup, include=FALSE}
 library(tidyverse)
 library(rvest)
+library(patchwork)
 
 knitr::opts_chunk$set(
   fig.width = 6,
@@ -188,3 +189,55 @@ df_pt1 %>%
 ```
 
 It appears that as the true value of mu increases, the proportion of times that the null was rejected exponentially increases, which represents an increase in power. This graph seems to indicate that effect size and power have a positive relationship, so as one increases, the other increases as well.
+
+```{r}
+output = vector("list", length = 6)
+
+for (i in 1:6) {
+output[[i]] = 
+  rerun(5000, okur(mu = mu_list[[i]])) %>% 
+  bind_rows() %>% 
+  summarize(
+    avg_mu = mean(estimate),
+    mu = mu_list[[i]]
+  )
+}
+
+avg_true = 
+  as.data.frame(do.call(rbind, lapply(output, function(x) { unlist(x)}))) 
+
+avg_true_plot = 
+  avg_true %>%
+  ggplot(aes(x = mu, y = avg_mu))+
+  geom_point()+
+  coord_cartesian(xlim = c(0,6), ylim = c(0,6))+
+  ggtitle(label = "Average Mean vs. True Mean")
+
+output = vector("list", length = 6)
+
+for (i in 1:6) {
+output[[i]] = 
+  rerun(5000, okur(mu = mu_list[[i]])) %>% 
+  bind_rows() %>% 
+  filter(p.value <= 0.05) %>% 
+  summarize(
+    avg_mu = mean(estimate),
+    mu = mu_list[[i]]
+  )
+}
+
+avg_reject = as.data.frame(do.call(rbind, lapply(output, function(x) { unlist(x)}))) 
+
+avg_reject_plot = 
+  avg_reject %>% 
+  ggplot(aes(x = mu, y = avg_mu))+
+  geom_point()+
+  coord_cartesian(xlim = c(0,6), ylim = c(0,6))+
+  ggtitle(label = "Average Mean Where Null Was Rejected vs. True Mean")
+
+avg_true_plot + avg_reject_plot
+```
+
+There is a clear difference in the two plots for the lower true mean values. The average means are nearly identical to the true means for all p-values. However, there are clear differences when we limit our sample to only simulated situations in which the p-value is at or under 0.05. The averages are quite far from the true mean for the true means of 1 and 2, but the averages get a lot closer to the true mean for the true means of 3 through 6, with the averages for 5 and 6 being closest to the true means.
+
+
